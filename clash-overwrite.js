@@ -17,38 +17,45 @@ function main(params) {
     params["allow-lan"] = true;
     params["unified-delay"] = true;
     params["log-level"] = "warning";
-    
+
     // 2. DNS 覆写 (Fake-IP 模式)
     params.dns = {
         enable: true,
-        "prefer-h3": true,
+        "prefer-h3": false,
+        "ipv6":false,
         "enhanced-mode": "fake-ip",
-        "nameserver": ["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"],
+        "fake-ip-filter": [
+            "geosite:connectivity-check",
+            "geosite:private",
+            "*.lan", 
+            "localhost.ptlogin2.qq.com", 
+            "+.stun.*.*", 
+            "*.stun.*.*.*", 
+            "*.stun.*.*.*.*"
+        ],
+        "default-nameserver": ["119.29.29.29","233.5.5.5",],
+        "nameserver": ["https://8.8.8.8/dns-query#PROXY&ecs=120.76.0.0/14&ecs-override=true","https://1.1.1.1/dns-query"],
         "proxy-server-nameserver": ["https://dns.alidns.com/dns-query"],
-        "fallback": ["https://1.1.1.1/dns-query","https://dns.google/dns-query"],
-        "fallback-filter": {
-            "geoip:private": false,
-            "geosite:cn": false
-        }
+        "direct-nameserver":["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"],
     };
 
     // 3. 代理组构建逻辑
     const allProxies = params.proxies.map(p => p.name);
     const testUrl = "https://cp.cloudflare.com";
-    
+
     // 存储识别到的有效地区组名
     const validRegionGroups = [];
     const regionProxyGroups = []; // 存放所有生成的地区相关组
 
     // --- 识别节点并生成地区组 ---
     const otherNodes = [...allProxies];
-    
+
     regionConfigs.forEach(r => {
         const matched = allProxies.filter(p => r.regex.test(p));
         if (matched.length > 0) {
             const autoName = `⚡ ${r.name} - 自动选择`;
             const fallbackName = `🛡️ ${r.name} - 故障转移`;
-            const manualName = r.icon+` ${r.name}`;
+            const manualName = r.icon + ` ${r.name}`;
 
             // 自动组 (隐藏)
             regionProxyGroups.push({
@@ -121,7 +128,7 @@ function main(params) {
         { name: "Ⓜ️ 微软服务", type: "select", proxies: ["DIRECT", "🎯 节点选择"] },
         { name: "Google", type: "select", proxies: ["🎯 节点选择", ...validRegionGroups] },
         { name: "Apple", type: "select", proxies: ["DIRECT", "🎯 节点选择"] },
-        { name: "广告拦截", type: "select", proxies: ["DIRECT", "REJECT"] },
+        { name: "广告拦截", type: "select", proxies: ["REJECT", "DIRECT"] },
         { name: "🐟 漏网之鱼", type: "select", proxies: ["🎯 节点选择", "DIRECT"] }
     ];
 
@@ -140,14 +147,18 @@ function main(params) {
         "microsoft": { ...baseProvider, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Microsoft/Microsoft.list" },
         "google": { ...baseProvider, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Google/Google.list" },
         "apple": { ...baseProvider, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple.list" },
-        "china": { ...baseProvider, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMax/ChinaMax.list" },
-        "advertising": { ...baseProvider, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Advertising/Advertising.list" },
+        "china_domain": { ...baseProvider, behavior: "domain", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMax/ChinaMax_Domain.txt" },
+        "china_ip": { ...baseProvider, behavior: "ipcidr", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMax/ChinaMax_IP.txt" },
+        "china": { ...baseProvider,format:"yaml", behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/ChinaMax/ChinaMax.yaml" },
+        "advertising": { ...baseProvider, behavior: "classical",format:"yaml", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Advertising/Advertising.yaml" },
+        "advertising_domain": { ...baseProvider, behavior: "domain", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Advertising/Advertising_Domain.txt" },
         "lan": { ...baseProvider, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Lan/Lan.list" },
     };
 
     // 5. 规则覆写
     params.rules = [
         "RULE-SET,advertising,广告拦截",
+        "RULE-SET,advertising_domain,广告拦截",
         "RULE-SET,lan,DIRECT",
         "RULE-SET,openai,🤖 智能AI",
         "RULE-SET,gemini,🤖 智能AI",
@@ -157,6 +168,8 @@ function main(params) {
         "RULE-SET,microsoft,Ⓜ️ 微软服务",
         "RULE-SET,google,Google",
         "RULE-SET,apple,Apple",
+        "RULE-SET,china_domain,DIRECT",
+        "RULE-SET,china_ip,DIRECT",
         "RULE-SET,china,DIRECT",
         "GEOIP,CN,DIRECT",
         "MATCH,🐟 漏网之鱼"
