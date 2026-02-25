@@ -22,7 +22,7 @@ function main(params) {
     params.dns = {
         enable: true,
         "prefer-h3": false,
-        "ipv6": false,
+        "ipv6": true,
         "enhanced-mode": "fake-ip",
         "fake-ip-filter": [
             "*.lan",
@@ -104,10 +104,17 @@ function main(params) {
             "api.bilibili.com",
             "a.w.bilicdn1.com"
         ],
-        "default-nameserver": ["119.29.29.29", "233.5.5.5",],
-        "nameserver": ["https://8.8.8.8/dns-query#PROXY&ecs=120.76.0.0/14&ecs-override=true", "https://1.1.1.1/dns-query"],
-        "proxy-server-nameserver": ["https://dns.alidns.com/dns-query"],
+        "default-nameserver": ["system", "119.29.29.29", "233.5.5.5",],
+        "nameserver": ["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"],
+        "proxy-server-nameserver": ["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"],
         "direct-nameserver": ["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"],
+        "fallback": ["https://8.8.8.8/dns-query", "https://1.1.1.1/dns-query"],
+        "fallback-filter": {
+            "geoip": true,
+            "geoip-code": "CN",
+            "geosite": ["gfw"],
+            "ipcidr": ["240.0.0.0/4"],
+        }
     };
 
     // 3. 代理组构建逻辑
